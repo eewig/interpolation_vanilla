@@ -13,6 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jsuites@5/dist/jsuites.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites@5/dist/jsuites.min.css" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script src='https://cdn.jsdelivr.net/npm/big.js@7.0.1/big.min.js'></script>
 
   <link rel="stylesheet" href="./style.css" type="text/css" />
 
@@ -34,9 +36,10 @@
         <div class="d-flex">
           
           <div id='sp-input'></div>
-          <div class="input-group align-items-baseline">
+          <div class="input-group align-content-start">
             <!-- <label for="step-value">Step</label> -->
-            <input type="number" min="1" placeholder="Step">
+            <!-- <input type="number" min="0" placeholder="Start" class="mb-3"> -->
+            <input type="number" min="0" placeholder="Step">
           </div>
           <div>
             <button class="btn btn-primary mb-3" onclick="calculate()">Calculate</button>
@@ -51,8 +54,6 @@
         <div id="sp-output"></div>
       </div>
     </div>
-
-
 
 
   </main>
@@ -98,11 +99,60 @@
 
   function calculate() {
     const dataGrid = spInput[0];
-    let xData = dataGrid.getColumn(0);
-    let yData = dataGrid.getColumn(1);
+    let xDataStr = dataGrid.getColumnData(0).filter(i => i !== "");
+    let yDataStr = dataGrid.getColumnData(1).filter(i => i !== "");
 
-    console.log(xData, yData)
+    if (xDataStr.length === 0 || yDataStr.length === 0) {
+      alert("No data provided");
+      return;
+    }
+
+    if (xDataStr.length !== yDataStr.length) {
+      alert("X and Y axis are missing data");
+      return;
+    }
+
+    xData = xDataStr.map(Number);
+    yData = yDataStr.map(Number);
+
+    if (xData.some(isNaN) || yData.some(isNaN)) {
+      alert("Invalid data provided. Please ensure all values are numbers.");
+      return;
+    }
+
+    let dataArray = xData.map((key, i) => ({x: key, y: yData[i]}));
+
+    dataArray.sort((a, b) => a.x - b.x);
+
+    if (dataArray[0].x < 0) {
+      alert("Interpolation of negative numbers is not available for now");
+      return;
+    }
+
+
+    console.log(dataArray)
   }
+
+  function linearInterpolation(p1, p2, xTarget) {
+    // return p1.y + (xTarget - p1.x) * (p2.y - p1.y) / (p2.x - p1.x);
+    return Big(p1.x).plus(
+      Big(Big(xTarget).minus(p1.x)).times(
+        Big(p2.y).minus(p1.y)
+      ).div(
+        Big(p2.x).minus(p1.x)
+      )
+    );
+  }
+
+  function getInterpolatedData(data, step, startX) {
+    const newData = Array.from(data);
+
+    // TODO add implementation for the case when start != 0
+
+    
+
+  }
+
 </script>
  
 </body>
