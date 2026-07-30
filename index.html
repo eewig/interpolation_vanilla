@@ -144,10 +144,30 @@
     );
   }
 
-  function getInterpolatedData(data, step, startX) {
+  function getInterpolatedData(data, step) {
     const newData = Array.from(data);
+    let newDataCurrentIndex = 0;
+    let currentX = newData[0].x;
+    let currentIndex = 0;
+    let nextIndex = 1;
+
+    if (currentX % step !== 0) {
+      currentX += step - currentX % step;
+    } else {
+      currentX += step;
+    }
+
+
+    while (currentX < data.at(-1).x) {
+      if (currentX === data[nextIndex].x) {
+        continue;
+      }
+      if (currentX >= )
+      newData
+    }
 
     // TODO add implementation for the case when start != 0
+
 
     
 
