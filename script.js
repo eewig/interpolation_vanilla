@@ -312,21 +312,34 @@ function shiftInputDataToZero() {
 }
 
 function shiftDataToZero(data) {
-  const minX = Big(data[0].x);
+  const minX = data[0].x;
   const newData = [];
 
   for (let i = 0; i < data.length; i++) {
-    newData.push({ x: Big(data[i].x).minus(minX), y: Big(data[i].y) });
+    newData.push({ x: decrementValue(data[i].x, minX, stepDataType), y: data[i].y });
   }
 
   return newData;
 }
 
-function incrementStepValue(currentStepValue) {
-  if (stepDataType === 'n') {
-    return stepInput.step = '1';
-  } 
-  
+function incrementValueWithStep(value) {
+  return incrementValue(value, stepValue, stepDataType);
 }
 
+function incrementValue(value, addend, dataType) {
+  if (dataType === 'n') {
+    return Big(value).plus(Big(addend));
+  }
+  return dayjs(value).add(addend, dataType);
+}
 
+function decrementValueWithStep(value) {
+  return decrementValue(value, stepValue, stepDataType);
+}
+
+function decrementValue(value, subtrahend, dataType) {
+  if (dataType === 'n') {
+    return Big(value).minus(Big(subtrahend));
+  }
+  return dayjs(value).subtract(subtrahend, dataType);
+}
