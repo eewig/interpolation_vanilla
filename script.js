@@ -3,8 +3,7 @@ const STORAGE_KEY = 'interpolation-state';
 let spInput;
 let spOutput;
 const stepInput = document.getElementById('step-value');
-const stepValue = stepInput.value;
-const stepDataType = document.getElementById('x-data-type').value;
+const stepDataTypeInput = document.getElementById('x-data-type');
 
 
 function loadSavedState() {
@@ -218,32 +217,35 @@ function linearInterpolation(p1, p2, xTarget) {
 function getInterpolatedData(data, step) {
   const stepBig = Big(step);
 
-  const dataPointsBig = data.map(pt => ({ x: Big(pt.x), y: Big(pt.y) }));
+  const dataPointsArray = data.map(pt => ({ x: pt.x, y: pt.y }));
 
-  const startX = dataPointsBig[0].x;
-  const newData = [{ x: startX, y: dataPointsBig[0].y }];
+  const startX = dataPointsArray[0].x;
+  const newData = [{ x: startX, y: dataPointsArray[0].y }];
   let currentX = startX;
   let currentSourceArrayIndex = 0;
 
-  if (currentX.mod(stepBig) !== 0) {
-    currentX = currentX.plus(stepBig).minus(currentX.mod(stepBig));
-  } else {
-    currentX = currentX.plus(stepBig);
-  }
+  // if (currentX.mod(stepBig) !== 0) {
+  //   currentX = currentX.plus(stepBig).minus(currentX.mod(stepBig));
+  // } else {
+  //   currentX = currentX.plus(stepBig);
+  // }
 
-  while (currentX.lte(dataPointsBig.at(-1).x)) {
-    if (currentX.eq(dataPointsBig[currentSourceArrayIndex].x)) {
-      newData.push(dataPointsBig[currentSourceArrayIndex]);
-      currentX = currentX.plus(stepBig);
+  currentX = incrementValueWithStep(currentX);
+
+
+  while (valueLte(currentX, dataPointsArray.at(-1).x)) {
+    if (valueEq(currentX, dataPointsArray[currentSourceArrayIndex].x)) {
+      newData.push(dataPointsArray[currentSourceArrayIndex]);
+      currentX = incrementValueWithStep(currentX);
       continue;
     }
 
-    const p1 = dataPointsBig[currentSourceArrayIndex];
-    const p2 = dataPointsBig[currentSourceArrayIndex + 1];
+    const p1 = dataPointsArray[currentSourceArrayIndex];
+    const p2 = dataPointsArray[currentSourceArrayIndex + 1];
     newData.push({ x: currentX, y: linearInterpolation(p1, p2, currentX) });
 
-    currentX = currentX.plus(stepBig);
-    if (currentX.gte(dataPointsBig[currentSourceArrayIndex + 1].x)) {
+    currentX = incrementValueWithStep(currentX);
+    if (valueGte(currentX, dataPointsArray[currentSourceArrayIndex + 1].x)) {
       currentSourceArrayIndex++;
     }
   }
@@ -316,14 +318,14 @@ function shiftDataToZero(data) {
   const newData = [];
 
   for (let i = 0; i < data.length; i++) {
-    newData.push({ x: decrementValue(data[i].x, minX, stepDataType), y: data[i].y });
+    newData.push({ x: decrementValue(data[i].x, minX, stepDataTypeInput.value), y: data[i].y });
   }
 
   return newData;
 }
 
 function incrementValueWithStep(value) {
-  return incrementValue(value, stepValue, stepDataType);
+  return incrementValue(value, stepInput.value, stepDataTypeInput.value);
 }
 
 function incrementValue(value, addend, dataType) {
@@ -334,7 +336,7 @@ function incrementValue(value, addend, dataType) {
 }
 
 function decrementValueWithStep(value) {
-  return decrementValue(value, stepValue, stepDataType);
+  return decrementValue(value, stepInput.value, stepDataTypeInput.value);
 }
 
 function decrementValue(value, subtrahend, dataType) {
@@ -342,4 +344,25 @@ function decrementValue(value, subtrahend, dataType) {
     return Big(value).minus(Big(subtrahend));
   }
   return dayjs(value).subtract(subtrahend, dataType);
+}
+
+function valueGte(value, compareTo) {
+  if (stepDataTypeInput.value === 'n') {
+    return Big(value).gte(Big(compareTo));
+  }
+  return dayjs(value).isSameOrAfter(dayjs(compareTo), stepDataTypeInput.value);
+}
+
+function valueLte(value, compareTo) {
+  if (stepDataTypeInput.value === 'n') {
+    return Big(value).lte(Big(compareTo));
+  }
+  return dayjs(value).isSameOrBefore(dayjs(compareTo), stepDataTypeInput.value);
+}
+
+function valueEq(value, compareTo) {
+  if (stepDataTypeInput.value === 'n') {
+    return Big(value).eq(Big(compareTo));
+  }
+  return dayjs(value).isSame(dayjs(compareTo), stepDataTypeInput.value);
 }
