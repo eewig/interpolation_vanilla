@@ -4,6 +4,7 @@ let spInput;
 let spOutput;
 const stepInput = document.getElementById('step-value');
 const stepDataTypeInput = document.getElementById('x-data-type');
+const yPrecisionInput = document.getElementById('y-min');
 
 
 function loadSavedState() {
@@ -21,12 +22,14 @@ function saveState() {
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     inputData: spInput[0].getData(),
-    step: stepInput.value
+    step: stepInput.value,
+    yPrecision: yPrecisionInput.value
   }));
 }
 
 const savedState = loadSavedState();
 stepInput.value = savedState.step || '';
+yPrecisionInput.value = savedState.yPrecision || '';
 
 // Create spreadsheets with the last saved data, when available.
 spInput = jspreadsheet(document.getElementById('sp-input'), {
@@ -153,15 +156,10 @@ function getDataPointsArrayFromDataGrid(dataGrid) {
     return;
   }
 
-  const xData = xDataStr.map(Number);
+  const xData = serializeXColumn(xDataStr);
   const yData = yDataStr.map(Number);
 
-  if (xData.some(isNaN) || yData.some(isNaN)) {
-    alert("Invalid data provided. Please ensure all values are numbers.");
-    return;
-  }
-
-  validateColumnNumberData(xData, dataGrid.getHeader(0));
+  validateXColumn(xData, dataGrid.getHeader(0));
   validateColumnNumberData(yData, dataGrid.getHeader(1));
 
   const dataArray = xData.map((key, i) => ({x: key, y: yData[i]}));
@@ -199,6 +197,25 @@ function validateStep(step) {
   return true;
 }
 
+function serializeXColumn(axisColumn) {
+  if (stepDataTypeInput.value === 'n') {
+    return axisColumn.map(Number);
+  }
+  return axisColumn.map(x => dayjs(x));
+}
+
+function validateXColumn(axisColumn, columnTitle) {
+  if (stepDataTypeInput.value === 'n') {
+    return validateColumnNumberData(axisColumn, columnTitle);
+  }
+
+  if (axisColumn.some(x => !dayjs(x).isValid())) {
+    alert(`Invalid data provided for column "${columnTitle}". Please ensure all values are valid dates.`);
+    return;
+  }
+  return true;
+}
+
 function linearInterpolation(p1, p2, xTarget) {
   // formula: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
   // return p1.y + (xTarget - p1.x) * (p2.y - p1.y) / (p2.x - p1.x);
@@ -211,7 +228,16 @@ function linearInterpolation(p1, p2, xTarget) {
   const numerator = x.minus(x1).times(y2.minus(y1));
   const denominator = x2.minus(x1);
 
-  return y1.plus(numerator.div(denominator));
+  let result = y1.plus(numerator.div(denominator));
+
+  if (yPrecisionInput.value) {
+    const precision = Number(yPrecisionInput.value);
+    if (!isNaN(precision) && precision) {
+      result = result.round(precision);
+    }
+  }
+
+  return result;
 }
 
 function getInterpolatedData(data, step) {

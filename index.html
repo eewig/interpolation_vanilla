@@ -63,6 +63,17 @@
               </div>
 
             </div>
+            <div id="y-config">
+              <h3 class="font-18 mt-3">Y</h3>
+              <div class="input-group mb-3">
+                <label for="y-min" class="input-group-text">
+                  Y precision
+                </label>
+                <input id="y-min" class="form-control" type="number" placeholder="precision" value="2">
+                <div class="form-text">(for numbers only)</div>
+              </div>
+
+            </div>
           </div>
           <div class="d-flex flex-column">
             <button class="btn btn-primary mb-3" onclick="calculate()">Calculate</button>
@@ -72,7 +83,7 @@
         </div>
       </div>
 
-      <div>
+      <div class="ms-3">
         <h2>Output</h2>
         <div class="d-flex">
           <div id="sp-output"></div>
