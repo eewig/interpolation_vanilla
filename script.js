@@ -9,7 +9,7 @@ const STORAGE_KEY = 'interpolation-state';
 
 let spInput;
 let spOutput;
-let isDatetimeUTC = false;
+let datetimeTZ = '';
 
 const stepInput = document.getElementById('step-value');
 const stepDataTypeInput = document.getElementById('x-data-type');
@@ -226,12 +226,12 @@ function serializeXColumn(axisColumn) {
   }
 
   let dayjsBaseSerializerFunc = (x) => dayjs(x.toNumber());
-  if (isDatetimeUTC) {
-    dayjsSerializerFunction = (x) => dayjsBaseSerializerFunc(x).utc();
+  if (datetimeTZ) {
+    dayjsSerializerFunction = (x) => dayjsBaseSerializerFunc(x).tz(datetimeTZ);
   } else {
     dayjsSerializerFunction = (x) => dayjsBaseSerializerFunc(x).local();
   }
-  return axisColumn.map(x => dayjsSerializerFunction(x).toISOString());
+  return axisColumn.map(x => dayjsSerializerFunction(x).format());
 }
 
 function validateXColumn(axisColumn, columnTitle) {
@@ -417,5 +417,11 @@ function valueEq(value, compareTo) {
 function checkDateTimeIsUTC(axisColumn) {
   if (dayjs(axisColumn[0]).isUTC()) {
     isDatetimeUTC = true;
+  }
+}
+
+function setDateTimeTZ(axisColumn) {
+  if (axisColumn[0]) {
+    datetimeTZ = daysjs.tz();
   }
 }
