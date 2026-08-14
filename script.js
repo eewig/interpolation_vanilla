@@ -1,10 +1,20 @@
+if (window.dayjs) {
+  if (window.dayjs_plugin_isSameOrAfter) dayjs.extend(window.dayjs_plugin_isSameOrAfter);
+  if (window.dayjs_plugin_isSameOrBefore) dayjs.extend(window.dayjs_plugin_isSameOrBefore);
+  if (window.dayjs_plugin_duration) dayjs.extend(window.dayjs_plugin_duration);
+  if (window.dayjs_plugin_utc) dayjs.extend(window.dayjs_plugin_utc);
+}
 
 const STORAGE_KEY = 'interpolation-state';
+
 let spInput;
 let spOutput;
+let isDatetimeUTC = false;
+
 const stepInput = document.getElementById('step-value');
 const stepDataTypeInput = document.getElementById('x-data-type');
 const yPrecisionInput = document.getElementById('y-min');
+
 
 
 function loadSavedState() {
@@ -23,16 +33,19 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     inputData: spInput[0].getData(),
     step: stepInput.value,
+    stepDataType: stepDataTypeInput.value,
     yPrecision: yPrecisionInput.value
   }));
 }
 
 const savedState = loadSavedState();
 stepInput.value = savedState.step || '';
+stepDataTypeInput.value = savedState.stepDataType || 'n';
 yPrecisionInput.value = savedState.yPrecision || '';
 
 // Create spreadsheets with the last saved data, when available.
 spInput = jspreadsheet(document.getElementById('sp-input'), {
+    columnResize: true,
     worksheets: [{
         data: savedState.inputData || [],
         minDimensions: [2,6],
@@ -45,10 +58,11 @@ spInput = jspreadsheet(document.getElementById('sp-input'), {
         ],
         onblur: function() {
           setTimeout(saveState, 0);
-        }
+        },
     }]
 });
 spOutput = jspreadsheet(document.getElementById('sp-output'), {
+    columnResize: true,
     worksheets: [{
         minDimensions: [2,6],
         minSpareRows: 1,
@@ -155,9 +169,11 @@ function getDataPointsArrayFromDataGrid(dataGrid) {
     alert("Data is incomplete. Please ensure both columns have the same number of data points.");
     return;
   }
+  
+  checkDateTimeIsUTC(xDataStr);
 
-  const xData = serializeXColumn(xDataStr);
-  const yData = yDataStr.map(Number);
+  const xData = deserializeXColumn(xDataStr);
+  const yData = yDataStr.map(parseFloat);
 
   validateXColumn(xData, dataGrid.getHeader(0));
   validateColumnNumberData(yData, dataGrid.getHeader(1));
@@ -197,11 +213,25 @@ function validateStep(step) {
   return true;
 }
 
+function deserializeXColumn(axisColumn) {
+  if (stepDataTypeInput.value === 'n') {
+    return axisColumn.map(parseFloat);
+  }
+  return axisColumn.map(x => dayjs(x).valueOf());
+}
+
 function serializeXColumn(axisColumn) {
   if (stepDataTypeInput.value === 'n') {
-    return axisColumn.map(Number);
+    return axisColumn.map(x => x.toString());
   }
-  return axisColumn.map(x => dayjs(x));
+
+  let dayjsBaseSerializerFunc = (x) => dayjs(x.toNumber());
+  if (isDatetimeUTC) {
+    dayjsSerializerFunction = (x) => dayjsBaseSerializerFunc(x).utc();
+  } else {
+    dayjsSerializerFunction = (x) => dayjsBaseSerializerFunc(x).local();
+  }
+  return axisColumn.map(x => dayjsSerializerFunction(x).toISOString());
 }
 
 function validateXColumn(axisColumn, columnTitle) {
@@ -243,11 +273,10 @@ function linearInterpolation(p1, p2, xTarget) {
 function getInterpolatedData(data, step) {
   const stepBig = Big(step);
 
-  const dataPointsArray = data.map(pt => ({ x: pt.x, y: pt.y }));
+  const dataPointsArray = data.map(pt => ({ x: Big(pt.x), y: Big(pt.y) }));
 
-  const startX = dataPointsArray[0].x;
-  const newData = [{ x: startX, y: dataPointsArray[0].y }];
-  let currentX = startX;
+  const newData = [{ x: dataPointsArray[0].x, y: dataPointsArray[0].y }];
+  let currentX = dataPointsArray[0].x;
   let currentSourceArrayIndex = 0;
 
   // if (currentX.mod(stepBig) !== 0) {
@@ -280,7 +309,7 @@ function getInterpolatedData(data, step) {
 }
 
 function setDataPointsArrayToDataGrid(dataGrid, dataArray) {
-  const xData = dataArray.map(i => i.x.toString());
+  const xData = serializeXColumn(dataArray.map(i => i.x));
   const yData = dataArray.map(i => i.y.toString());
 
   dataGrid.setColumnData(0, xData);
@@ -355,10 +384,10 @@ function incrementValueWithStep(value) {
 }
 
 function incrementValue(value, addend, dataType) {
-  if (dataType === 'n') {
-    return Big(value).plus(Big(addend));
+  if (dataType !== 'n') {
+    addend = dayjs.duration(addend, dataType).asMilliseconds();
   }
-  return dayjs(value).add(addend, dataType);
+  return Big(value).plus(Big(addend));
 }
 
 function decrementValueWithStep(value) {
@@ -366,29 +395,27 @@ function decrementValueWithStep(value) {
 }
 
 function decrementValue(value, subtrahend, dataType) {
-  if (dataType === 'n') {
-    return Big(value).minus(Big(subtrahend));
+    if (dataType !== 'n') {
+    subtrahend = dayjs.duration(subtrahend, dataType).asMilliseconds();
   }
-  return dayjs(value).subtract(subtrahend, dataType);
+  return Big(value).minus(Big(subtrahend));
 }
 
 function valueGte(value, compareTo) {
-  if (stepDataTypeInput.value === 'n') {
-    return Big(value).gte(Big(compareTo));
-  }
-  return dayjs(value).isSameOrAfter(dayjs(compareTo), stepDataTypeInput.value);
+  return Big(value).gte(Big(compareTo));
 }
 
 function valueLte(value, compareTo) {
-  if (stepDataTypeInput.value === 'n') {
-    return Big(value).lte(Big(compareTo));
-  }
-  return dayjs(value).isSameOrBefore(dayjs(compareTo), stepDataTypeInput.value);
+  return Big(value).lte(Big(compareTo));
+
 }
 
 function valueEq(value, compareTo) {
-  if (stepDataTypeInput.value === 'n') {
-    return Big(value).eq(Big(compareTo));
+  return Big(value).eq(Big(compareTo));
+}
+
+function checkDateTimeIsUTC(axisColumn) {
+  if (dayjs(axisColumn[0]).isUTC()) {
+    isDatetimeUTC = true;
   }
-  return dayjs(value).isSame(dayjs(compareTo), stepDataTypeInput.value);
 }
