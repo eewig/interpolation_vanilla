@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites@5/dist/jsuites.min.css" type="text/css" />
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha256-SERKgtTty1vsDxll+qzd4Y2cF9swY9BCq62i9wXJ9Uo=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
 
   <script src='https://cdn.jsdelivr.net/npm/big.js@7.0.1/big.min.js'></script>
 
@@ -38,6 +39,10 @@
 
       <div id="chart-wrapper" class="mx-auto" style="max-width: 900px; min-height: 400px;">
         <canvas id="myChart"></canvas>
+      </div>
+      
+      <div class="mx-auto">
+        <button class="btn btn-outline-secondary" onclick="resetChartZoom()">Reset Zoom</button>
       </div>
 
     </div>

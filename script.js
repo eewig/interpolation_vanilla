@@ -127,13 +127,32 @@ let chart = new Chart(ctx, {
         }
       },
       y: {
-        beginAtZero: true,
+        beginAtZero: false,
         title: {
           display: true,
           text: 'Y'
         }
       }
-    }
+    },
+    plugins: {
+      zoom: {
+        zoom: {
+          wheel: {
+            enabled: true,
+          },
+          pinch: {
+            enabled: true
+          },
+          drag: {
+            enabled: true,
+          },
+          mode: 'y',
+        },
+        pan: {
+          enabled: true,
+        },
+      }
+    },
   }
 });
 
@@ -275,7 +294,7 @@ function getInterpolatedData(data, step) {
 
   const dataPointsArray = data.map(pt => ({ x: Big(pt.x), y: Big(pt.y) }));
 
-  const newData = [{ x: dataPointsArray[0].x, y: dataPointsArray[0].y }];
+  const newData = [];
   let currentX = dataPointsArray[0].x;
   let currentSourceArrayIndex = 0;
 
@@ -285,8 +304,6 @@ function getInterpolatedData(data, step) {
   //   currentX = currentX.plus(stepBig);
   // }
 
-  currentX = incrementValueWithStep(currentX);
-
 
   while (valueLte(currentX, dataPointsArray.at(-1).x)) {
     if (valueEq(currentX, dataPointsArray[currentSourceArrayIndex].x)) {
@@ -294,15 +311,19 @@ function getInterpolatedData(data, step) {
       currentX = incrementValueWithStep(currentX);
       continue;
     }
-
+    
     const p1 = dataPointsArray[currentSourceArrayIndex];
     const p2 = dataPointsArray[currentSourceArrayIndex + 1];
     newData.push({ x: currentX, y: linearInterpolation(p1, p2, currentX) });
 
     currentX = incrementValueWithStep(currentX);
-    if (valueGte(currentX, dataPointsArray[currentSourceArrayIndex + 1].x)) {
+    while(
+      dataPointsArray[currentSourceArrayIndex + 1] 
+      && valueGte(currentX, dataPointsArray[currentSourceArrayIndex + 1].x)
+    ) {
       currentSourceArrayIndex++;
     }
+    
   }
 
   return newData;
@@ -316,6 +337,7 @@ function setDataPointsArrayToDataGrid(dataGrid, dataArray) {
   dataGrid.setColumnData(1, yData);
 }
 
+// Chart
 function updateChartData(datasetIndex, dataPointsArray, label) {
   const step = parseFloat(stepInput.value);
   const tickStep = Number.isFinite(step) && step > 0 ? step : 1;
@@ -331,7 +353,24 @@ function updateChartData(datasetIndex, dataPointsArray, label) {
     stepSize: tickStep
   };
 
+  const yValues = dataPointsArray
+  .map(p => Number(p.y))
+  .filter(value => Number.isFinite(value));
+  const minY = Math.min(...yValues);
+  const maxY = Math.max(...yValues);
+  const padding = maxY === minY ? 1 : (maxY - minY) * 0.1;
+
+  chart.options.scales.y = {
+    ...chart.options.scales.y,
+    min: minY - padding,
+    max: maxY + padding,
+  };
+
   chart.update();
+}
+
+function resetChartZoom() {
+  chart.resetZoom();
 }
 
 function plotInput() {
